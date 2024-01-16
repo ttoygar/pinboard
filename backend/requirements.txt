@@ -1,0 +1,7 @@
+Django==5.0
+djangorestframework
+psycopg2-binary
+celery
+redis
+django-environ
+django-extensions
