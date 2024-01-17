@@ -11,6 +11,8 @@ services:
       POSTGRES_DB: project_db
     ports:
       - "5432:5432"
+    expose:
+      - "5432"
     # Uncomment the following lines for setting resource limits in production
     # mem_limit: 500m
     # cpu_shares: 10
@@ -19,17 +21,21 @@ services:
     image: redis:6
     ports:
       - "6379:6379"
+    expose:
+      - 6379
     # mem_limit: 250m
     # cpu_shares: 10
+    restart: on-failure
 
-  celery_worker:
+  worker:
     build: ./backend
-    command: celery -A pinboard worker --loglevel=info
+    command: sh -c "celery -A pinboard.celery.app worker --loglevel=info"
     volumes:
       - ./backend:/code
     depends_on:
       - db
       - redis
+      - backend
     environment:
       DEBUG: 1
       SECRET_KEY: 1234567890
@@ -44,10 +50,23 @@ services:
     # mem_limit: 300m
     # cpu_shares: 10
 
+  beat:
+    build: ./backend
+    restart: on-failure
+    command: sh -c "celery -A pinboard.celery.app beat -l info"
+    volumes:
+      - ./backend:/code
+    depends_on:
+      - backend
+      - redis
+      - db
+      - worker
+
   backend:
     build: ./backend
     command: >
       sh -c "python manage.py wait_for_db &&
+             python manage.py makemigrations &&
              python manage.py migrate && 
              python manage.py runserver 0.0.0.0:8000"
     volumes:
@@ -103,14 +122,18 @@ services:
 
   flower:
     image: mher/flower
-    command: celery flower --broker=redis://redis:6379/0 --port=5555
+    environment:
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - FLOWER_PORT=5555
     ports:
-      - "5555:5555"
+      - 5555:5555
+    expose:
+      - 5555
     depends_on:
       - redis
-      - celery_worker
-      # mem_limit: 250m
-      # cpu_shares: 10
+      - worker
+    # mem_limit: 250m
+    # cpu_shares: 10
 
 volumes:
   postgres_data:
