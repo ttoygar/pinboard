@@ -1,72 +1,11 @@
 version: '3.8'
 
 services:
-  app_db:
-    image: postgres:13-alpine
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    # environment:
-    #   POSTGRES_USER: pinmin
-    #   POSTGRES_PASSWORD: postgres
-    #   POSTGRES_DB: project_db
-    env_file:
-      - backend/.env
-    ports:
-      - "5432:5432"
-    expose:
-      - "5432"
-    restart: on-failure
-    # Uncomment the following lines for setting resource limits in production
-    # mem_limit: 500m
-    # cpu_shares: 10
-
-  redis:
-    image: redis:6
-    ports:
-      - "6379:6379"
-    expose:
-      - 6379
-    # mem_limit: 250m
-    # cpu_shares: 10
-    restart: on-failure
-
-  worker:
-    build: ./backend
-    command: sh -c "celery -A pinboard.celery.app worker --loglevel=info"
-    volumes:
-      - ./backend:/code
-    depends_on:
-      - app_db
-      - redis
-      - backend
-    environment:
-      DEBUG: 1
-      SECRET_KEY: 1234567890
-      DJANGO_ALLOWED_HOSTS: localhost 127.0.0.1 [::1]
-      SQL_ENGINE: django.db.backends.postgresql
-      SQL_DATABASE: project_db
-      SQL_USER: postgres
-      SQL_PASSWORD: postgres
-      SQL_HOST: app_db
-      SQL_PORT: 5432
-      DATABASE: postgres
-    # mem_limit: 300m
-    # cpu_shares: 10
-
-  beat:
-    build: ./backend
-    restart: on-failure
-    command: sh -c "celery -A pinboard.celery.app beat -l info"
-    volumes:
-      - ./backend:/code
-    depends_on:
-      - backend
-      - redis
-      - app_db
-      - worker
-
   backend:
-    build: ./backend
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.be
+    image: &pinbe pinbe
     command: >
       sh -c "python manage.py wait_for_db &&
              python manage.py makemigrations &&
@@ -91,6 +30,8 @@ services:
       SQL_HOST: app_db
       SQL_PORT: 5432
       DATABASE: postgres
+    networks:
+      - pinboard
     # healthcheck:
     #   test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
     #   interval: 1m30s
@@ -101,16 +42,112 @@ services:
     # cpu_shares: 10
 
   frontend:
-    build: ./frontend
+    build:
+      context: frontend
+      dockerfile: ./Dockerfile.fe
+    # command: npm start
     volumes:
       - ./frontend:/app
       - /app/node_modules
     ports:
       - "3000:3000"
+    environment:
+      - NODE_ENV=development
     depends_on:
       - backend
+    networks:
+      - pinboard
     # mem_limit: 300m
     # cpu_shares: 10
+
+  app_db:
+    image: postgres:13-alpine
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    # environment:
+    #   POSTGRES_USER: pinmin
+    #   POSTGRES_PASSWORD: postgres
+    #   POSTGRES_DB: project_db
+    env_file:
+      - backend/.env
+    ports:
+      - "5432:5432"
+    expose:
+      - "5432"
+    restart: on-failure
+    networks:
+      - pinboard
+    # Uncomment the following lines for setting resource limits in production
+    # mem_limit: 500m
+    # cpu_shares: 10
+
+  redis:
+    image: redis:6
+    ports:
+      - "6379:6379"
+    expose:
+      - 6379
+    # mem_limit: 250m
+    # cpu_shares: 10
+    restart: on-failure
+    networks:
+      - pinboard
+
+  worker:
+    restart: unless-stopped
+    # build:
+    #   context: ./backend
+    #   dockerfile: Dockerfile.be
+    image: *pinbe
+    command: sh -c "celery -A pinboard.celery.app worker --loglevel=info"
+    volumes:
+      - ./backend:/code
+    depends_on:
+      - app_db
+      - redis
+      - backend
+    environment:
+      DEBUG: 1
+      CELERY_BROKER_URL: "redis://redis:6379/0"
+      CELERY_RESULT_BACKEND: "redis://redis:6379/0"
+      DJANGO_DB: postgresql
+      POSTGRES_HOST: app_db
+      POSTRGES_NAME: project_db
+      POSTGRES_USER: pinmin
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_PORT: 5432
+      # SECRET_KEY: 1234567890
+      # DJANGO_ALLOWED_HOSTS: localhost 127.0.0.1 [::1]
+      # SQL_ENGINE: django.db.backends.postgresql
+      # SQL_DATABASE: project_db
+      # SQL_USER: postgres
+      # SQL_PASSWORD: postgres
+      # SQL_HOST: app_db
+      # SQL_PORT: 5432
+      # DATABASE: postgres
+    networks:
+      - pinboard
+    # mem_limit: 300m
+    # cpu_shares: 10
+
+  beat:
+    # build:
+    #   context: ./backend
+    #   dockerfile: Dockerfile.be
+    image: *pinbe
+    restart: on-failure
+    command: sh -c "celery -A pinboard.celery.app beat -l info"
+    volumes:
+      - ./backend:/code
+    env_file:
+      - backend/.env
+    depends_on:
+      - backend
+      - redis
+      - app_db
+      - worker
+    networks:
+      - pinboard
 
   pgadmin:
     image: dpage/pgadmin4
@@ -121,23 +158,32 @@ services:
       - "5050:80"
     depends_on:
       - app_db
+    networks:
+      - pinboard
     # mem_limit: 300m
     # cpu_shares: 10
 
-  flower:
-    image: mher/flower
-    environment:
-      - CELERY_BROKER_URL=redis://redis:6379/0
-      - FLOWER_PORT=5555
-    ports:
-      - 5555:5555
-    expose:
-      - 5555
-    depends_on:
-      - redis
-      - worker
-    # mem_limit: 250m
-    # cpu_shares: 10
+    # flower:
+    #   image: mher/flower
+    #   environment:
+    #     - CELERY_BROKER_URL=redis://redis:6379/0
+    #     - FLOWER_PORT=5555
+    #   ports:
+    #     - 5555:5555
+    #   expose:
+    #     - 5555
+    #   depends_on:
+    #     - redis
+    #     - worker
+    #     - beat
+    #   networks:
+    #     - pinboard
+    #   # mem_limit: 250m
+    #   # cpu_shares: 10
+
+networks:
+  pinboard:
+
 
 volumes:
   postgres_data:

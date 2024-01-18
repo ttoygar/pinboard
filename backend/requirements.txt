@@ -1,7 +1,9 @@
 Django==5.0
 djangorestframework
 psycopg2-binary
-celery
+celery[redis]
+django-celery-results
+django-celery-beat==2.1.0
 redis
 django-environ
 django-extensions
