@@ -4,7 +4,7 @@ services:
   backend:
     build:
       context: ./backend
-      dockerfile: Dockerfile.be
+      dockerfile: Dockerfile
     image: &pinbe pinbe
     command: >
       sh -c "python manage.py wait_for_db &&
@@ -44,7 +44,7 @@ services:
   frontend:
     build:
       context: frontend
-      dockerfile: ./Dockerfile.fe
+      dockerfile: ./Dockerfile
     # command: npm start
     volumes:
       - ./frontend:/app
@@ -163,23 +163,23 @@ services:
     # mem_limit: 300m
     # cpu_shares: 10
 
-    # flower:
-    #   image: mher/flower
-    #   environment:
-    #     - CELERY_BROKER_URL=redis://redis:6379/0
-    #     - FLOWER_PORT=5555
-    #   ports:
-    #     - 5555:5555
-    #   expose:
-    #     - 5555
-    #   depends_on:
-    #     - redis
-    #     - worker
-    #     - beat
-    #   networks:
-    #     - pinboard
-    #   # mem_limit: 250m
-    #   # cpu_shares: 10
+  flower:
+    image: mher/flower
+    environment:
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - FLOWER_PORT=5555
+    ports:
+      - 5555:5555
+    expose:
+      - 5555
+    depends_on:
+      - redis
+      - worker
+      - beat
+    networks:
+      - pinboard
+    # mem_limit: 250m
+    # cpu_shares: 10
 
 networks:
   pinboard:
