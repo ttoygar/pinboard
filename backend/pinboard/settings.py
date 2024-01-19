@@ -46,8 +46,9 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     'django_celery_beat',
-    # 'django_celery_results',
+    'django_celery_results',
     "django_extensions",
+    'django_elasticsearch_dsl',
     "utils"
 ]
 
@@ -145,3 +146,10 @@ CELERY_RESULT_BACKEND = 'redis://redis:6379/0'
 #     'beat_scheduler': 'django_celery_beat.schedulers:DatabaseScheduler',
 #     # 'cache_backend': env("CELERY_CACHE_BACKEND_URL"),
 # }
+
+# Elasticsearch
+ELASTICSEARCH_DSL = {
+    'default': {
+        'hosts': os.getenv("ELASTICSEARCH_DSL_HOSTS", 'localhost:9200')
+    },
+}
