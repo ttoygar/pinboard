@@ -43,11 +43,14 @@ services:
     # cpu_shares: 10
 
   es:
-    image: elasticsearch:7.8.1
+    # image: elasticsearch:7.8.1
+    image: elasticsearch:8.12.0
     environment:
       - discovery.type=single-node
     ports:
       - "9200:9200"
+    networks:
+      - pinboard
 
   frontend:
     build:
@@ -107,7 +110,7 @@ services:
     #   context: ./backend
     #   dockerfile: Dockerfile.be
     image: *pinbe
-    command: sh -c "celery -A pinboard.celery.app worker --loglevel=info"
+    command: sh -c "celery -A core worker --loglevel=info"
     volumes:
       - ./backend:/code
     depends_on:
@@ -144,7 +147,7 @@ services:
     #   dockerfile: Dockerfile.be
     image: *pinbe
     restart: on-failure
-    command: sh -c "celery -A pinboard.celery.app beat -l info"
+    command: sh -c "celery -A core beat --loglevel=info -S django"
     volumes:
       - ./backend:/code
     env_file:
