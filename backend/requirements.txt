@@ -8,3 +8,4 @@ redis
 django-environ
 django-extensions
 django-elasticsearch-dsl
+django-cors-headers
