@@ -21,16 +21,17 @@ services:
       - es
     restart: always
     environment:
-      DEBUG: 1
-      SECRET_KEY: 1234567890
-      DJANGO_ALLOWED_HOSTS: localhost 127.0.0.1 [::1]
-      SQL_ENGINE: django.db.backends.postgresql
-      SQL_DATABASE: project_db
-      SQL_USER: postgres
-      SQL_PASSWORD: postgres
-      SQL_HOST: app_db
-      SQL_PORT: 5432
-      DATABASE: postgres
+      - ENVIRONMENT=docker
+      - DEBUG=1
+      - SECRET_KEY=1234567890
+      - DJANGO_ALLOWED_HOSTS=localhost 127.0.0.1 [::1]
+      - SQL_ENGINE=django.db.backends.postgresql
+      - SQL_DATABASE=project_db
+      - SQL_USER=postgres
+      - SQL_PASSWORD=postgres
+      - SQL_HOST=app_db
+      - SQL_PORT=5432
+      - DATABASE=postgres
     networks:
       - pinboard
     # healthcheck:
