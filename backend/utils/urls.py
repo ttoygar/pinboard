@@ -1,5 +1,5 @@
 from django.urls import include, path
-from . import views
+from utils import views
 
 
 urlpatterns = [

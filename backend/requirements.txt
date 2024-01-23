@@ -10,3 +10,4 @@ django-extensions
 django-elasticsearch-dsl
 django-cors-headers
 ipdb
+djangorestframework-simplejwt

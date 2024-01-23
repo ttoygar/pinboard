@@ -18,19 +18,17 @@ import os
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-env = environ.Env(
-    DEBUG=(bool, False)
-)
+env = environ.Env()
+
 ENV_TYPE = os.environ.get('ENVIRONMENT', 'local')
+
+# SECURITY WARNING: don't run with debug turned on in production!
+DEBUG = env.bool("DEBUG", default=False)
 
 if ENV_TYPE == 'docker':
     environ.Env.read_env(env_file=str(BASE_DIR) + '/.env')
 elif ENV_TYPE == "local":
     environ.Env.read_env(env_file=str(BASE_DIR) + '/.env.local')
-
-# Get environment variables from .env file
-# env.read_env(str(BASE_DIR.parent / ".env"))
-# environ.Env.read_env(env_file=str(BASE_DIR) + '/.env')
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.0/howto/deployment/checklist/
@@ -38,8 +36,6 @@ elif ENV_TYPE == "local":
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = env("SECRET_KEY")
 
-# SECURITY WARNING: don't run with debug turned on in production!
-# DEBUG = env.bool("DEBUG", default=False)
 
 ALLOWED_HOSTS = env.list("ALLOWED_HOSTS", default=[])
 
@@ -60,6 +56,8 @@ INSTALLED_APPS = [
     'rest_framework',
     'corsheaders',
     "utils",
+    "posts",
+    'rest_framework_simplejwt.token_blacklist',
 ]
 
 MIDDLEWARE = [
@@ -167,3 +165,14 @@ ELASTICSEARCH_DSL = {
 }
 
 CORS_ALLOWED_ORIGINS = env.list("CORS_ALLOWED_ORIGINS")
+
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+    ),
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.IsAuthenticated',
+    ],
+    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
+    'PAGE_SIZE': 10
+}
